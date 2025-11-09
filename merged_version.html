@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Music trend</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  :root { --ink: #e8edf7; }
+  body { margin:0; background:#0f1b33; color:var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+
+  /* Boombox stage (1488×846) */
+  .boombox {
+    position: relative;
+    width: min(95vw, calc(95vh * (1488 / 846)));
+    aspect-ratio: 1488 / 846;
+    margin: 24px auto;
+    background: url("./boombox.png") center / contain no-repeat;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+
+  .region {
+    position: absolute;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
+  }
+
+  /* Center screen */
+  #center-rect {
+    left: 25%; top: 23%;
+    width: 50%; height: 60%;
+    background: rgba(51, 67, 109, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    border-radius: 6px;
+  }
+  #center-rect svg { width: 100%; height: 100%; display: block; }
+
+  /* Speaker circles */
+  #left-circle, #right-circle {
+    width: 20%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: rgba(16,26,52,.22);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  #left-circle  { left: 2%;  top: 49.5%; transform: translateY(-50%); }
+  #right-circle { right: 2%; top: 49.5%; transform: translateY(-50%); }
+
+  .circle-card {
+    width: 82%;
+    height: 82%;
+    background: rgba(7,12,28,.7);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    padding: 10px;
+    text-align: center;
+  }
+
+  /* Left: view buttons (compact two-column layout inside circle) */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 8px;
+    align-items: start;
+    width: 100%;
+    padding-left: 20px; /* shift all buttons slightly to the right */
+  }
+  .legend > strong {
+    grid-column: 1 / -1; /* title spans both columns */
+    margin-bottom: 6px;
+    display: block;
+    font-size: 13px;
+    text-align: center;
+  }
+  .legend button {
+    width: 80%; /* slightly wider to keep visual balance after padding */
+    margin: 0;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background:#22315f;
+    color:#e8edf7;
+    border:1px solid #33457a;
+    cursor:pointer;
+    font-size: 11px;
+    text-align: center;
+  }
+  .legend button.active { outline: 2px solid #a78bfa; }
+
+  #rightContent { width: 88%; }
+
+  /* Range slider (dual handles) */
+  .ctl-label { font-size: 12px; opacity:.9; margin-top: 2px; }
+  .slider-container { position: relative; height: 28px; margin: 10px 0 2px; }
+  .slider-track { height: 6px; background: #2b3c6f; position: absolute; width: 100%; top: 50%; transform: translateY(-50%); border-radius: 3px; }
+  .slider-range { position: absolute; height: 6px; background: #6ea8fe; border-radius: 3px; top: 50%; transform: translateY(-50%); }
+  .handle { width: 16px; height: 16px; background: #6ea8fe; border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); cursor: pointer; border:1px solid rgba(255,255,255,.35); }
+  .handle:hover { background:#86bbff; }
+  .mini-tip { position:absolute; transform: translate(-50%, -140%); background: rgba(7,12,28,0.95); color:#e8edf7; padding:2px 6px; font-size:11px; border-radius:4px; border:1px solid rgba(255,255,255,.1); pointer-events:none; }
+  .rangeLabel { font-size:12px; opacity:.85; margin-top: 2px; }
+
+  /* Tooltip for charts */
+  .tooltip {
+    position: absolute;
+    background: rgba(7,12,28,0.95);
+    color: #e8edf7;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 8px;
+    font-size: 13px;
+    pointer-events: none;
+    opacity: 0;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<div class="boombox">
+  <!-- center: main plot -->
+  <div id="center-rect" class="region">
+    <svg id="mainChart" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <!-- left: all views listed as buttons -->
+  <div id="left-circle" class="region">
+    <div class="circle-card">
+      <div class="legend">
+        <strong style="margin-bottom:6px;display:block;margin-left:-20px;">Select View</strong>
+         <!-- <strong>Select View</strong> -->
+        <button data-view="genre" class="active">Genre</button>
+        <button data-view="tempo">Tempo</button>
+        <button data-view="danceability">Danceability</button>
+        <button data-view="energy">Energy</button>
+        <button data-view="acousticness">Acousticness</button>
+        <button data-view="duration_ms">Duration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- right: dynamic controls -->
+  <div id="right-circle" class="region">
+    <div class="circle-card">
+      <div id="rightContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ------------------ DATA ------------------
+const audioData = [
+  {year:1980,danceability:0.620,energy:0.571,tempo:103.130,acousticness:0.356,duration_ms:207390},
+  {year:1981,danceability:0.630,energy:0.649,tempo:123.569,acousticness:0.304,duration_ms:227191},
+  {year:1982,danceability:0.668,energy:0.629,tempo:120.588,acousticness:0.141,duration_ms:235502},
+  {year:1983,danceability:0.697,energy:0.593,tempo:122.858,acousticness:0.139,duration_ms:252009},
+  {year:1984,danceability:0.651,energy:0.691,tempo:116.194,acousticness:0.176,duration_ms:249788},
+  {year:1985,danceability:0.663,energy:0.656,tempo:107.884,acousticness:0.173,duration_ms:279528},
+  {year:1986,danceability:0.625,energy:0.570,tempo:112.360,acousticness:0.209,duration_ms:272095},
+  {year:1987,danceability:0.625,energy:0.792,tempo:108.949,acousticness:0.226,duration_ms:263893},
+  {year:1988,danceability:0.622,energy:0.705,tempo:121.720,acousticness:0.227,duration_ms:260760},
+  {year:1989,danceability:0.679,energy:0.668,tempo:110.760,acousticness:0.271,duration_ms:253647},
+  {year:1990,danceability:0.649,energy:0.606,tempo:115.785,acousticness:0.286,duration_ms:277173},
+  {year:1991,danceability:0.621,energy:0.555,tempo:115.620,acousticness:0.196,duration_ms:273140},
+  {year:1992,danceability:0.707,energy:0.568,tempo:113.428,acousticness:0.175,duration_ms:270712},
+  {year:1993,danceability:0.706,energy:0.566,tempo:109.532,acousticness:0.253,duration_ms:269637},
+  {year:1994,danceability:0.640,energy:0.562,tempo:113.855,acousticness:0.249,duration_ms:243978},
+  {year:1995,danceability:0.687,energy:0.570,tempo:120.888,acousticness:0.230,duration_ms:270767},
+  {year:1996,danceability:0.643,energy:0.479,tempo:129.628,acousticness:0.432,duration_ms:262663},
+  {year:1997,danceability:0.706,energy:0.622,tempo:105.768,acousticness:0.167,duration_ms:258585},
+  {year:1998,danceability:0.641,energy:0.499,tempo:131.300,acousticness:0.214,duration_ms:273190},
+  {year:1999,danceability:0.654,energy:0.655,tempo:123.767,acousticness:0.181,duration_ms:231018},
+  {year:2000,danceability:0.645,energy:0.649,tempo:112.342,acousticness:0.159,duration_ms:260767},
+  {year:2001,danceability:0.632,energy:0.693,tempo:99.549,acousticness:0.172,duration_ms:232442},
+  {year:2002,danceability:0.655,energy:0.731,tempo:122.503,acousticness:0.120,duration_ms:245053},
+  {year:2003,danceability:0.651,energy:0.759,tempo:95.572,acousticness:0.142,duration_ms:226088},
+  {year:2004,danceability:0.738,energy:0.684,tempo:103.611,acousticness:0.158,duration_ms:230300},
+  {year:2005,danceability:0.713,energy:0.650,tempo:121.201,acousticness:0.142,duration_ms:220696},
+  {year:2006,danceability:0.778,energy:0.698,tempo:123.144,acousticness:0.191,duration_ms:232418},
+  {year:2007,danceability:0.631,energy:0.679,tempo:138.635,acousticness:0.238,duration_ms:237920},
+  {year:2008,danceability:0.690,energy:0.561,tempo:112.681,acousticness:0.309,duration_ms:231876},
+  {year:2009,danceability:0.713,energy:0.693,tempo:128.154,acousticness:0.128,duration_ms:224747},
+  {year:2010,danceability:0.707,energy:0.826,tempo:109.248,acousticness:0.121,duration_ms:238075},
+  {year:2011,danceability:0.689,energy:0.771,tempo:121.964,acousticness:0.124,duration_ms:224520},
+  {year:2012,danceability:0.682,energy:0.707,tempo:128.416,acousticness:0.094,duration_ms:217835},
+  {year:2013,danceability:0.597,energy:0.684,tempo:123.647,acousticness:0.187,duration_ms:253207},
+  {year:2014,danceability:0.630,energy:0.656,tempo:124.885,acousticness:0.240,duration_ms:219400},
+  {year:2015,danceability:0.723,energy:0.669,tempo:111.208,acousticness:0.161,duration_ms:227923},
+  {year:2016,danceability:0.654,energy:0.632,tempo:130.298,acousticness:0.187,duration_ms:227330},
+  {year:2017,danceability:0.769,energy:0.666,tempo:126.141,acousticness:0.184,duration_ms:225174},
+  {year:2018,danceability:0.709,energy:0.664,tempo:120.574,acousticness:0.084,duration_ms:216595},
+  {year:2019,danceability:0.778,energy:0.576,tempo:127.334,acousticness:0.217,duration_ms:209586},
+  {year:2020,danceability:0.705,energy:0.626,tempo:116.776,acousticness:0.253,duration_ms:200920}
+];
+
+const genreMini = [
+  { year: "1980", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 1, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 3, "R&B": 1, Rap: 0, Rock: 4 },
+  { year: "1981", "Country Pop": 2,  "Hip Hop": 0, "Latin Pop": 0, Pop: 0, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 6, "R&B": 1, Rap: 0, Rock: 0 },
+  { year: "1982", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 2, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 5, "R&B": 1, Rap: 0, Rock: 2 },
+  { year: "1983", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 4, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 4, "R&B": 0, Rap: 0, Rock: 1 },
+  { year: "1984", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 3, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 2, "R&B": 3, Rap: 0, Rock: 2 },
+  { year: "1985", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 3, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 3, "R&B": 2, Rap: 0, Rock: 1 },
+  { year: "1986", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 3, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 3, "R&B": 2, Rap: 0, Rock: 1 },
+  { year: "1987", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 3, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 4, "R&B": 0, Rap: 0, Rock: 3 },
+  { year: "1988", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 4, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 3, "R&B": 0, Rap: 0, Rock: 2 },
+  { year: "1989", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 5, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 2, "R&B": 1, Rap: 0, Rock: 1 },
+  { year: "1990", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 2, "Pop Ballad": 2, "Pop Rap": 0, "Pop Rock": 2, "R&B": 2, Rap: 0, Rock: 2 },
+  { year: "1991", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 4, "Pop Ballad": 2, "Pop Rap": 0, "Pop Rock": 1, "R&B": 2, Rap: 0, Rock: 1 },
+  { year: "1992", "Country Pop": 0,  "Hip Hop": 2, "Latin Pop": 0, Pop: 1, "Pop Ballad": 2, "Pop Rap": 0, "Pop Rock": 0, "R&B": 4, Rap: 0, Rock: 1 },
+  { year: "1993", "Country Pop": 0,  "Hip Hop": 2, "Latin Pop": 0, Pop: 2, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 0, "R&B": 5, Rap: 0, Rock: 0 },
+  { year: "1994", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 3, "Pop Ballad": 3, "Pop Rap": 0, "Pop Rock": 2, "R&B": 2, Rap: 0, Rock: 0 },
+  { year: "1995", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 0, Pop: 5, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 0, "R&B": 4, Rap: 0, Rock: 0 },
+  { year: "1996", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 1, Pop: 3, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 1, "R&B": 3, Rap: 0, Rock: 0 },
+  { year: "1997", "Country Pop": 1,  "Hip Hop": 2, "Latin Pop": 0, Pop: 2, "Pop Ballad": 4, "Pop Rap": 0, "Pop Rock": 0, "R&B": 1, Rap: 0, Rock: 0 },
+  { year: "1998", "Country Pop": 2,  "Hip Hop": 0, "Latin Pop": 0, Pop: 2, "Pop Ballad": 2, "Pop Rap": 0, "Pop Rock": 1, "R&B": 3, Rap: 0, Rock: 0 },
+  { year: "1999", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 1, Pop: 5, "Pop Ballad": 3, "Pop Rap": 0, "Pop Rock": 1, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2000", "Country Pop": 2,  "Hip Hop": 0, "Latin Pop": 2, Pop: 2, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 2, "R&B": 1, Rap: 0, Rock: 0 },
+  { year: "2001", "Country Pop": 0,  "Hip Hop": 2, "Latin Pop": 0, Pop: 3, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 3, "R&B": 1, Rap: 0, Rock: 1 },
+  { year: "2002", "Country Pop": 0,  "Hip Hop": 2, "Latin Pop": 0, Pop: 1, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 1, "R&B": 3, Rap: 0, Rock: 3 },
+  { year: "2003", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 0, Pop: 3, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 2, "R&B": 1, Rap: 1, Rock: 2 },
+  { year: "2004", "Country Pop": 0,  "Hip Hop": 3, "Latin Pop": 0, Pop: 3, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 1, "R&B": 3, Rap: 0, Rock: 0 },
+  { year: "2005", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 0, Pop: 2, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 2, "R&B": 2, Rap: 1, Rock: 1 },
+  { year: "2006", "Country Pop": 0,  "Hip Hop": 4, "Latin Pop": 1, Pop: 3, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 0, "R&B": 1, Rap: 0, Rock: 0 },
+  { year: "2007", "Country Pop": 1,  "Hip Hop": 3, "Latin Pop": 0, Pop: 6, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 0, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2008", "Country Pop": 0,  "Hip Hop": 2, "Latin Pop": 0, Pop: 0, "Pop Ballad": 3, "Pop Rap": 0, "Pop Rock": 1, "R&B": 4, Rap: 0, Rock: 0 },
+  { year: "2009", "Country Pop": 1,  "Hip Hop": 2, "Latin Pop": 0, Pop: 5, "Pop Ballad": 0, "Pop Rap": 0, "Pop Rock": 1, "R&B": 0, Rap: 1, Rock: 0 },
+  { year: "2010", "Country Pop": 1,  "Hip Hop": 0, "Latin Pop": 0, Pop: 7, "Pop Ballad": 0, "Pop Rap": 2, "Pop Rock": 0, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2011", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 7, "Pop Ballad": 1, "Pop Rap": 1, "Pop Rock": 0, "R&B": 1, Rap: 0, Rock: 0 },
+  { year: "2012", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 9, "Pop Ballad": 0, "Pop Rap": 1, "Pop Rock": 0, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2013", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 0, Pop: 3, "Pop Ballad": 2, "Pop Rap": 3, "Pop Rock": 1, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2014", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 0, Pop: 4, "Pop Ballad": 2, "Pop Rap": 2, "Pop Rock": 1, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2015", "Country Pop": 0,  "Hip Hop": 3, "Latin Pop": 0, Pop: 3, "Pop Ballad": 2, "Pop Rap": 0, "Pop Rock": 1, "R&B": 1, Rap: 0, Rock: 0 },
+  { year: "2016", "Country Pop": 0,  "Hip Hop": 1, "Latin Pop": 0, Pop: 7, "Pop Ballad": 1, "Pop Rap": 0, "Pop Rock": 1, "R&B": 0, Rap: 0, Rock: 0 },
+  { year: "2017", "Country Pop": 1,  "Hip Hop": 1, "Latin Pop": 1, Pop: 3, "Pop Ballad": 0, "Pop Rap": 1, "Pop Rock": 1, "R&B": 0, Rap: 2, Rock: 0 },
+  { year: "2018", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 1, Pop: 3, "Pop Ballad": 1, "Pop Rap": 4, "Pop Rock": 0, "R&B": 0, Rap: 1, Rock: 0 },
+  { year: "2019", "Country Pop": 0,  "Hip Hop": 0, "Latin Pop": 0, Pop: 6, "Pop Ballad": 0, "Pop Rap": 3, "Pop Rock": 0, "R&B": 0, Rap: 1, Rock: 0 },
+  { year: "2020", "Country Pop": 1,  "Hip Hop": 0, "Latin Pop": 0, Pop: 5, "Pop Ballad": 1, "Pop Rap": 2, "Pop Rock": 0, "R&B": 0, Rap: 1, Rock: 0 }
+];
+
+// ------------------ CHART SETUP ------------------
+const svg = d3.select("#mainChart");
+const margin = {top:20,right:20,bottom:40,left:55};
+const width  = 900 - margin.left - margin.right;
+const height = 560 - margin.top - margin.bottom;
+const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+const chartTip = d3.select("#tooltip");
+function clearChart(){ g.selectAll("*").remove(); }
+
+// Genre keys/colors
+const keys = ["Rock", "Pop Rock", "Pop", "Pop Ballad", "Country Pop", "Latin Pop", "Pop Rap", "Rap", "Hip Hop", "R&B"];
+const color = d3.scaleOrdinal()
+  .domain(keys)
+  .range(["#7ce2ad","#7cc6c6","#7ca8da","#808be9","#a689dd","#c784d0","#e77dc3","#eb9ab3","#ecb79f","#ebd385"]);
+
+// Feature colors
+const featureColors = {
+  tempo:"#60a5fa",
+  danceability:"#f472b6",
+  energy:"#ef4444",
+  acousticness:"#22c55e",
+  duration_ms:"#a855f7"
+};
+
+// ------------------ RIGHT-CONTENT BUILDERS ------------------
+function buildLegend(){
+  const wrap = d3.select("#rightContent");
+  wrap.selectAll("*").remove();
+
+  // layout params
+  const ROWS = 5;          // <-- exactly 5 rows
+  const rowH = 22;         // row height
+  const colW = 100;         // column width (tweak if labels clip)
+  const pad  = 8;
+  const sw   = 14;         // swatch size
+
+  const cols = Math.ceil(keys.length / ROWS);
+  const w = pad * 2 + cols * colW;
+  const h = pad * 2 + ROWS * rowH;
+
+  const svgL = wrap.append("svg")
+    .attr("width", Math.min(w, 260))   // keep inside the circle; adjust if needed
+    .attr("height", h)
+    .style("overflow", "hidden");
+
+//   const gL = svgL.append("g").attr("transform", `translate(${pad},${pad})`);
+  // move entire legend a bit right (tweak offsetX as you like)
+  const offsetX = 10;
+  const gL = svgL.append("g")
+    .attr("transform", `translate(${pad + offsetX},${pad})`);
+
+  gL.selectAll("g.item")
+    .data(keys)
+    .join("g")
+    .attr("class", "item")
+    .attr("transform", (d, i) => {
+      const r = i % ROWS;               // 0..2
+      const c = Math.floor(i / ROWS);   // 0..cols-1
+      return `translate(${c * colW}, ${r * rowH})`;
+    })
+    .each(function(d){
+      const g = d3.select(this);
+      g.append("rect")
+        .attr("width", sw).attr("height", sw)
+        .attr("rx", 3).attr("ry", 3)
+        .attr("y", 3)
+        .attr("fill", color(d));
+      g.append("text")
+        .attr("x", sw + 6).attr("y", 14)
+        .text(d)
+        .style("fill", "#e8edf7")
+        .style("font-size", "12px");
+    });
+}
+
+function buildYearSlider(start=1980, end=2020, onChange){
+  const wrap = d3.select("#rightContent");
+  wrap.selectAll("*").remove();
+
+  wrap.append("div").attr("class","ctl-label").text("Year Range");
+  const slider = wrap.append("div").attr("class","slider-container").attr("id","slider");
+  slider.append("div").attr("class","slider-track");
+  slider.append("div").attr("class","slider-range");
+  slider.append("div").attr("class","handle").attr("id","handleMin");
+  slider.append("div").attr("class","handle").attr("id","handleMax");
+  slider.append("div").attr("class","mini-tip").attr("id","tipMin").text(start);
+  slider.append("div").attr("class","mini-tip").attr("id","tipMax").text(end);
+  wrap.append("div").attr("class","rangeLabel").attr("id","rangeLabel").text(`${start} - ${end}`);
+
+  const minYear = d3.min(audioData, d=>d.year);
+  const maxYear = d3.max(audioData, d=>d.year);
+  const minGap = 5;
+  let yearStart = start, yearEnd = end;
+
+  const sliderNode = slider.node();
+  const sliderWidth = () => sliderNode.getBoundingClientRect().width;
+  const rangeEl = slider.select(".slider-range");
+  const hMin = slider.select("#handleMin");
+  const hMax = slider.select("#handleMax");
+  const tMin = slider.select("#tipMin");
+  const tMax = slider.select("#tipMax");
+
+  function yearToX(y){ return ((y - minYear) / (maxYear - minYear)) * sliderWidth(); }
+  function xToYear(x){ return Math.round(minYear + (x / sliderWidth()) * (maxYear - minYear)); }
+
+  function updateSlider(){
+    const xMin = yearToX(yearStart);
+    const xMax = yearToX(yearEnd);
+    hMin.style("left", xMin + "px");
+    hMax.style("left", xMax + "px");
+    rangeEl.style("left", xMin + "px").style("width", (xMax - xMin) + "px");
+    tMin.style("left", xMin + "px").text(yearStart);
+    tMax.style("left", xMax + "px").text(yearEnd);
+    d3.select("#rangeLabel").text(`${yearStart} - ${yearEnd}`);
+    onChange(yearStart, yearEnd);
+  }
+
+  const dragMin = d3.drag().on("drag", (event)=>{
+    let xPos = Math.min(event.x, yearToX(yearEnd - minGap));
+    xPos = Math.max(0, xPos);
+    yearStart = xToYear(xPos);
+    updateSlider();
+  });
+
+  const dragMax = d3.drag().on("drag", (event)=>{
+    let xPos = Math.max(event.x, yearToX(yearStart + minGap));
+    xPos = Math.min(sliderWidth(), xPos);
+    yearEnd = xToYear(xPos);
+    updateSlider();
+  });
+
+  hMin.call(dragMin);
+  hMax.call(dragMax);
+  updateSlider();
+  window.addEventListener("resize", updateSlider, { passive: true });
+}
+
+// ------------------ RENDERERS ------------------
+function renderGenre(){
+  clearChart();
+
+  const stacked = d3.stack().keys(keys)(genreMini);
+
+  const x = d3.scaleBand()
+    .domain(genreMini.map(d => d.year))
+    .range([0,width]).padding(0.2);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(stacked[stacked.length - 1], d => d[1])]).nice()
+    .range([height,0]);
+
+  g.append("g").attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
+  g.append("g").call(d3.axisLeft(y));
+
+  const groups = g.selectAll("g.layer")
+    .data(stacked)
+    .join("g")
+    .attr("class","layer")
+    .attr("fill", d => color(d.key));
+
+  groups.selectAll("rect")
+    .data(d => d)
+    .join("rect")
+    .attr("x", d => x(d.data.year))
+    .attr("y", d => y(d[1]))
+    .attr("height", d => y(d[0]) - y(d[1]))
+    .attr("width", x.bandwidth())
+    .on("mousemove", (event, d) => {
+      const genre = d3.select(event.currentTarget.parentNode).datum().key;
+      const count = d.data[genre];
+      chartTip.style("opacity", 1)
+        .html(`<strong>Year:</strong> ${d.data.year}<br/><strong>Genre:</strong> ${genre}<br/><strong>Count:</strong> ${count}`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", () => chartTip.style("opacity", 0));
+}
+
+function renderFeatureRange(feature="tempo", startYear=1980, endYear=2020){
+  clearChart();
+
+  const data = audioData.filter(d=> d.year >= startYear && d.year <= endYear);
+
+  const x = d3.scaleLinear().domain([startYear, endYear]).range([0,width]);
+  const yMin = d3.min(data, d=> d[feature]);
+  const yMax = d3.max(data, d=> d[feature]);
+
+  // padding / clamping
+  let padMin = yMin * 0.95, padMax = yMax * 1.05;
+  if (["danceability","energy","acousticness"].includes(feature)){
+    padMin = Math.max(0, yMin - 0.05);
+    padMax = Math.min(1, yMax + 0.05);
+  }
+  const y = d3.scaleLinear().domain([padMin, padMax]).range([height, 0]);
+
+  g.append("g").attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+  g.append("g").call(d3.axisLeft(y));
+
+  const area = d3.area()
+    .x(d=> x(d.year))
+    .y0(height)
+    .y1(d=> y(d[feature]))
+    .curve(d3.curveMonotoneX);
+
+  g.append("path")
+    .datum(data)
+    .attr("fill", featureColors[feature] || "#60a5fa")
+    .attr("opacity", 0.8)
+    .attr("d", area);
+
+  g.selectAll(".dot")
+   .data(data)
+   .enter()
+   .append("circle")
+   .attr("class","dot")
+   .attr("cx", d=> x(d.year))
+   .attr("cy", d=> y(d[feature]))
+   .attr("r", 4)
+   .attr("fill", "#000")
+   .attr("stroke", "#fff")
+   .on("mouseover", function(event,d){
+      const v = ["danceability","energy","acousticness"].includes(feature)
+                ? d[feature].toFixed(3)
+                : (feature==="tempo" ? d[feature].toFixed(3) : Math.round(d[feature]));
+      chartTip.style("opacity", 1)
+        .html(`Year: ${d.year}<br>${feature}: ${v}`)
+        .style("left",(event.pageX+10)+"px")
+        .style("top",(event.pageY-28)+"px");
+   })
+   .on("mousemove", function(event){
+      chartTip.style("left",(event.pageX+10)+"px").style("top",(event.pageY-28)+"px");
+   })
+   .on("mouseout", function(){ chartTip.style("opacity", 0); });
+}
+
+// ------------------ INIT & TOGGLE ------------------
+const legendBtns = document.querySelectorAll(".legend button");
+let currentView = document.querySelector(".legend button.active")?.dataset.view || "genre";
+
+function showGenre() {
+  renderGenre();
+  buildLegend();
+}
+
+function showFeature(feature) {
+  // build slider and render; slider drives re-render
+  buildYearSlider(1980, 2020, (ys, ye) => renderFeatureRange(feature, ys, ye));
+  renderFeatureRange(feature, 1980, 2020);
+}
+
+if (currentView === "genre") showGenre(); else showFeature(currentView);
+
+legendBtns.forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    legendBtns.forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentView = btn.dataset.view;
+
+    if (currentView === "genre") {
+      showGenre();
+    } else {
+      showFeature(currentView); // currentView is the feature name
+    }
+  });
+});
+</script>
+</body>
+</html>
