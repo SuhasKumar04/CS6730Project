@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Music trend</title>
+<title>Music trend (Genre multi‑select)</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <style>
   :root { --ink: #e8edf7; }
@@ -19,102 +19,55 @@
     box-shadow: 0 12px 40px rgba(0,0,0,.35);
   }
 
-  .region {
-    position: absolute;
-    overflow: hidden;
-    display: grid;
-    place-items: center;
-    pointer-events: auto;
-  }
+  .region { position: absolute; overflow: hidden; display: grid; place-items: center; pointer-events: auto; }
 
   /* Center screen */
-  #center-rect {
-    left: 25%; top: 23%;
-    width: 50%; height: 60%;
-    background: rgba(51, 67, 109, 0.25);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
-    border-radius: 6px;
-  }
+  #center-rect { left: 25%; top: 23%; width: 50%; height: 60%; background: rgba(51, 67, 109, 0.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); border-radius: 6px; }
   #center-rect svg { width: 100%; height: 100%; display: block; }
 
   /* Speaker circles */
-  #left-circle, #right-circle {
-    width: 20%;
-    aspect-ratio: 1 / 1;
-    border-radius: 50%;
-    background: rgba(16,26,52,.22);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
-  }
+  #left-circle, #right-circle { width: 20%; aspect-ratio: 1 / 1; border-radius: 50%; background: rgba(16,26,52,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
   #left-circle  { left: 2%;  top: 49.5%; transform: translateY(-50%); }
   #right-circle { right: 2%; top: 49.5%; transform: translateY(-50%); }
 
-  .circle-card {
-    width: 82%;
-    height: 82%;
-    background: rgba(7,12,28,.7);
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 50%;
-    display: grid; place-items: center;
-    padding: 10px;
-    text-align: center;
-  }
+  .circle-card { width: 82%; height: 82%; background: rgba(7,12,28,.7); border: 1px solid rgba(255,255,255,.06); border-radius: 50%; display: grid; place-items: center; padding: 10px; text-align: center; }
 
-  /* Left: view buttons (compact two-column layout inside circle) */
-  .legend {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 8px;
-    align-items: start;
-    width: 100%;
-    padding-left: 20px; /* shift all buttons slightly to the right */
-  }
-  .legend > strong {
-    grid-column: 1 / -1; /* title spans both columns */
-    margin-bottom: 6px;
-    display: block;
-    font-size: 13px;
-    text-align: center;
-  }
-  .legend button {
-    width: 80%; /* slightly wider to keep visual balance after padding */
-    margin: 0;
-    padding: 6px 8px;
-    border-radius: 8px;
-    background:#22315f;
-    color:#e8edf7;
-    border:1px solid #33457a;
-    cursor:pointer;
-    font-size: 11px;
-    text-align: center;
-  }
+  /* Left: view buttons */
+  .legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; align-items: start; width: 100%; padding-left: 20px; }
+  .legend > strong { grid-column: 1 / -1; margin-bottom: 6px; display: block; font-size: 13px; text-align: center; }
+  .legend button { width: 80%; margin: 0; padding: 6px 8px; border-radius: 8px; background:#22315f; color:#e8edf7; border:1px solid #33457a; cursor:pointer; font-size: 11px; text-align: center; }
   .legend button.active { outline: 2px solid #a78bfa; }
 
-  #rightContent { width: 88%; }
-
-  /* Range slider (dual handles) */
-  .ctl-label { font-size: 12px; opacity:.9; margin-top: 2px; }
-  .slider-container { position: relative; height: 28px; margin: 10px 0 2px; }
-  .slider-track { height: 6px; background: #2b3c6f; position: absolute; width: 100%; top: 50%; transform: translateY(-50%); border-radius: 3px; }
-  .slider-range { position: absolute; height: 6px; background: #6ea8fe; border-radius: 3px; top: 50%; transform: translateY(-50%); }
-  .handle { width: 16px; height: 16px; background: #6ea8fe; border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); cursor: pointer; border:1px solid rgba(255,255,255,.35); }
-  .handle:hover { background:#86bbff; }
-  .mini-tip { position:absolute; transform: translate(-50%, -140%); background: rgba(7,12,28,0.95); color:#e8edf7; padding:2px 6px; font-size:11px; border-radius:4px; border:1px solid rgba(255,255,255,.1); pointer-events:none; }
-  .rangeLabel { font-size:12px; opacity:.85; margin-top: 2px; }
+  #rightContent { width: 88%; color:#e8edf7; }
+  #rightContent h4 { margin: 4px 0 8px; font-size: 14px; }
+  .ctl-row { display:flex; align-items:center; justify-content:center; gap:6px; margin: 6px 0 10px; flex-wrap:wrap; }
+  .pill { font-size: 11px; padding:4px 8px; border-radius: 999px; border:1px solid rgba(255,255,255,.18); background:#21325f; cursor:pointer; }
+  .pill:hover { background:#2a3a6d; }
+  .tiny { font-size: 11px; opacity: .85; }
+  .genre-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; max-height: 58%; overflow:auto; padding-right:4px; }
+  .genre-item { display:flex; align-items:center; gap:6px; }
+  .swatch { width: 10px; height:10px; border-radius:2px; display:inline-block; }
+  .empty-note { font-size: 12px; opacity:.9; text-align:center; margin-top: 8px; }
 
   /* Tooltip for charts */
-  .tooltip {
-    position: absolute;
-    background: rgba(7,12,28,0.95);
-    color: #e8edf7;
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 6px 8px;
-    font-size: 13px;
-    pointer-events: none;
-    opacity: 0;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  }
+  .tooltip { position: absolute; background: rgba(7,12,28,0.95); color: #e8edf7; border: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; font-size: 13px; pointer-events: none; opacity: 0; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
 </style>
+
+<style>
+/* === Circle visibility and spacing fixes === */
+#left-circle, #right-circle { width: 24% !important; }            /* make circles bigger */
+.circle-card{
+  width: 90% !important;
+  height: 90% !important;
+  padding: 8px !important;
+}
+#rightContent{ font-size: 13px !important; }
+#rightContent h4{ font-size: 16px !important; margin: 4px 0 8px !important; }
+.ctl-row{ gap: 6px !important; margin: 6px 0 8px !important; }
+.pill{ font-size: 10px !important; padding: 4px 8px !important; }
+.genre-grid{ gap: 4px 8px !important; max-height: 64% !important; } /* more room to breathe */
+</style>
+
 </head>
 <body>
 
@@ -129,7 +82,6 @@
     <div class="circle-card">
       <div class="legend">
         <strong style="margin-bottom:6px;display:block;margin-left:-20px;">Select View</strong>
-         <!-- <strong>Select View</strong> -->
         <button data-view="genre" class="active">Genre</button>
         <button data-view="tempo">Tempo</button>
         <button data-view="danceability">Danceability</button>
@@ -252,263 +204,205 @@ const chartTip = d3.select("#tooltip");
 function clearChart(){ g.selectAll("*").remove(); }
 
 // Genre keys/colors
-const keys = ["Rock", "Pop Rock", "Pop", "Pop Ballad", "Country Pop", "Latin Pop", "Pop Rap", "Rap", "Hip Hop", "R&B"];
+const allGenreKeys = ["Rock", "Pop Rock", "Pop", "Pop Ballad", "Country Pop", "Latin Pop", "Pop Rap", "Rap", "Hip Hop", "R&B"];
 const color = d3.scaleOrdinal()
-  .domain(keys)
+  .domain(allGenreKeys)
   .range(["#7ce2ad","#7cc6c6","#7ca8da","#808be9","#a689dd","#c784d0","#e77dc3","#eb9ab3","#ecb79f","#ebd385"]);
 
-// Feature colors
-const featureColors = {
-  tempo:"#60a5fa",
-  danceability:"#f472b6",
-  energy:"#ef4444",
-  acousticness:"#22c55e",
-  duration_ms:"#a855f7"
-};
+// Feature colors (for other views)
+const featureColors = { tempo:"#60a5fa", danceability:"#f472b6", energy:"#ef4444", acousticness:"#22c55e", duration_ms:"#a855f7" };
 
-// ------------------ RIGHT-CONTENT BUILDERS ------------------
-function buildLegend(){
+// ------------------ RIGHT‑SIDE UI BUILDERS ------------------
+function buildGenreControls(selectedSet){
   const wrap = d3.select("#rightContent");
   wrap.selectAll("*").remove();
 
-  // layout params
-  const ROWS = 5;          // <-- exactly 5 rows
-  const rowH = 22;         // row height
-  const colW = 100;         // column width (tweak if labels clip)
-  const pad  = 8;
-  const sw   = 14;         // swatch size
+  wrap.append("h4").text("Select all that apply");
 
-  const cols = Math.ceil(keys.length / ROWS);
-  const w = pad * 2 + cols * colW;
-  const h = pad * 2 + ROWS * rowH;
+  // quick actions
+  const actions = wrap.append("div").attr("class","ctl-row");
+  actions.append("button").attr("class","pill").text("All").on("click",()=>{ selectedSet.clear(); allGenreKeys.forEach(k=>selectedSet.add(k)); renderGenre([...selectedSet]); buildGenreControls(selectedSet); });
+  actions.append("button").attr("class","pill").text("None").on("click",()=>{ selectedSet.clear(); renderGenre([...selectedSet]); buildGenreControls(selectedSet); });
+  actions.append("span").attr("class","tiny").text("Tip: toggle individual genres below");
 
-  const svgL = wrap.append("svg")
-    .attr("width", Math.min(w, 260))   // keep inside the circle; adjust if needed
-    .attr("height", h)
-    .style("overflow", "hidden");
+  // grid of checkboxes
+  const grid = wrap.append("div").attr("class","genre-grid");
+  const row = grid.selectAll("label.genre-item").data(allGenreKeys, d=>d).join("label").attr("class","genre-item");
 
-//   const gL = svgL.append("g").attr("transform", `translate(${pad},${pad})`);
-  // move entire legend a bit right (tweak offsetX as you like)
-  const offsetX = 10;
-  const gL = svgL.append("g")
-    .attr("transform", `translate(${pad + offsetX},${pad})`);
-
-  gL.selectAll("g.item")
-    .data(keys)
-    .join("g")
-    .attr("class", "item")
-    .attr("transform", (d, i) => {
-      const r = i % ROWS;               // 0..2
-      const c = Math.floor(i / ROWS);   // 0..cols-1
-      return `translate(${c * colW}, ${r * rowH})`;
-    })
-    .each(function(d){
-      const g = d3.select(this);
-      g.append("rect")
-        .attr("width", sw).attr("height", sw)
-        .attr("rx", 3).attr("ry", 3)
-        .attr("y", 3)
-        .attr("fill", color(d));
-      g.append("text")
-        .attr("x", sw + 6).attr("y", 14)
-        .text(d)
-        .style("fill", "#e8edf7")
-        .style("font-size", "12px");
+  row.append("input")
+    .attr("type","checkbox")
+    .property("checked", d=> selectedSet.has(d))
+    .on("change", function(evt, d){
+      if (this.checked) selectedSet.add(d); else selectedSet.delete(d);
+      renderGenre([...selectedSet]);
     });
+
+  row.append("span").attr("class","swatch").style("background", d=> color(d));
+  row.append("span").text(d=> d);
+
+  if (selectedSet.size === 0) {
+    wrap.append("div").attr("class","empty-note").text("No genres selected. Choose at least one to plot.");
+  }
 }
 
-function buildYearSlider(start=1980, end=2020, onChange){
+function buildFeatureSlider(start=1980, end=2020, onChange){
   const wrap = d3.select("#rightContent");
   wrap.selectAll("*").remove();
 
-  wrap.append("div").attr("class","ctl-label").text("Year Range");
-  const slider = wrap.append("div").attr("class","slider-container").attr("id","slider");
-  slider.append("div").attr("class","slider-track");
-  slider.append("div").attr("class","slider-range");
-  slider.append("div").attr("class","handle").attr("id","handleMin");
-  slider.append("div").attr("class","handle").attr("id","handleMax");
-  slider.append("div").attr("class","mini-tip").attr("id","tipMin").text(start);
-  slider.append("div").attr("class","mini-tip").attr("id","tipMax").text(end);
-  wrap.append("div").attr("class","rangeLabel").attr("id","rangeLabel").text(`${start} - ${end}`);
+  wrap.append("div").attr("class","tiny").text("Year Range");
+  const slider = wrap.append("div").style("width","90%")
+    .style("height","28px").style("position","relative");
+  slider.append("div").style("position","absolute").style("left","0").style("right","0").style("top","50%")
+    .style("height","6px").style("transform","translateY(-50%)").style("background","#2b3c6f").style("border-radius","3px");
+  const rangeEl = slider.append("div").style("position","absolute").style("height","6px").style("background","#6ea8fe").style("border-radius","3px");
+  const hMin = slider.append("div").style("position","absolute").style("width","16px").style("height","16px").style("background","#6ea8fe").style("border","1px solid rgba(255,255,255,.35)").style("border-radius","50%")
+    .style("top","50%").style("transform","translate(-50%,-50%)").style("cursor","pointer");
+  const hMax = slider.append("div").style("position","absolute").style("width","16px").style("height","16px").style("background","#6ea8fe").style("border","1px solid rgba(255,255,255,.35)").style("border-radius","50%")
+    .style("top","50%").style("transform","translate(-50%,-50%)").style("cursor","pointer");
+  const tMin = slider.append("div").attr("class","tiny").style("position","absolute");
+  const tMax = slider.append("div").attr("class","tiny").style("position","absolute");
+  const label = wrap.append("div").attr("class","tiny");
 
-  const minYear = d3.min(audioData, d=>d.year);
-  const maxYear = d3.max(audioData, d=>d.year);
-  const minGap = 5;
-  let yearStart = start, yearEnd = end;
-
-  const sliderNode = slider.node();
-  const sliderWidth = () => sliderNode.getBoundingClientRect().width;
-  const rangeEl = slider.select(".slider-range");
-  const hMin = slider.select("#handleMin");
-  const hMax = slider.select("#handleMax");
-  const tMin = slider.select("#tipMin");
-  const tMax = slider.select("#tipMax");
-
-  function yearToX(y){ return ((y - minYear) / (maxYear - minYear)) * sliderWidth(); }
-  function xToYear(x){ return Math.round(minYear + (x / sliderWidth()) * (maxYear - minYear)); }
-
-  function updateSlider(){
-    const xMin = yearToX(yearStart);
-    const xMax = yearToX(yearEnd);
-    hMin.style("left", xMin + "px");
-    hMax.style("left", xMax + "px");
-    rangeEl.style("left", xMin + "px").style("width", (xMax - xMin) + "px");
-    tMin.style("left", xMin + "px").text(yearStart);
-    tMax.style("left", xMax + "px").text(yearEnd);
-    d3.select("#rangeLabel").text(`${yearStart} - ${yearEnd}`);
+  const minYear = d3.min(audioData, d=>d.year), maxYear = d3.max(audioData, d=>d.year);
+  let yearStart=start, yearEnd=end; const minGap=5;
+  const node = slider.node();
+  const sliderW = () => node.getBoundingClientRect().width;
+  const yearToX = y => ((y-minYear)/(maxYear-minYear))*sliderW();
+  const xToYear = x => Math.round(minYear + (x/sliderW())*(maxYear-minYear));
+  function update(){
+    const xMin = yearToX(yearStart), xMax = yearToX(yearEnd);
+    hMin.style("left", xMin+"px"); hMax.style("left", xMax+"px");
+    rangeEl.style("left", xMin+"px").style("width", (xMax-xMin)+"px");
+    tMin.style("left", xMin+"px").style("transform","translate(-50%,-170%)").text(yearStart);
+    tMax.style("left", xMax+"px").style("transform","translate(-50%,-170%)").text(yearEnd);
+    label.text(`${yearStart} – ${yearEnd}`);
     onChange(yearStart, yearEnd);
   }
-
-  const dragMin = d3.drag().on("drag", (event)=>{
-    let xPos = Math.min(event.x, yearToX(yearEnd - minGap));
-    xPos = Math.max(0, xPos);
-    yearStart = xToYear(xPos);
-    updateSlider();
-  });
-
-  const dragMax = d3.drag().on("drag", (event)=>{
-    let xPos = Math.max(event.x, yearToX(yearStart + minGap));
-    xPos = Math.min(sliderWidth(), xPos);
-    yearEnd = xToYear(xPos);
-    updateSlider();
-  });
-
-  hMin.call(dragMin);
-  hMax.call(dragMax);
-  updateSlider();
-  window.addEventListener("resize", updateSlider, { passive: true });
+  const dragMin = d3.drag().on("drag", (e)=>{ let x=e.x; x=Math.min(x, yearToX(yearEnd-minGap)); x=Math.max(0,x); yearStart=xToYear(x); update(); });
+  const dragMax = d3.drag().on("drag", (e)=>{ let x=e.x; x=Math.max(x, yearToX(yearStart+minGap)); x=Math.min(sliderW(),x); yearEnd=xToYear(x); update(); });
+  d3.select(hMin.node()).call(dragMin); d3.select(hMax.node()).call(dragMax);
+  update();
+  window.addEventListener('resize', update, {passive:true});
 }
 
 // ------------------ RENDERERS ------------------
-function renderGenre(){
+function renderGenre(selectedKeys){
   clearChart();
+  const keys = selectedKeys.length ? selectedKeys : [];
 
-  const stacked = d3.stack().keys(keys)(genreMini);
+  // Axes setup
+  const x = d3.scaleBand().domain(genreMini.map(d=>d.year)).range([0,width]).padding(0.2);
+  let yMax = 10; // default max stack height for Top 10 chart
+  if (keys.length){
+    // build stacked data only for selected keys
+    const stacked = d3.stack().keys(keys)(genreMini);
+    yMax = d3.max(stacked[stacked.length-1], d=> d[1]);
 
-  const x = d3.scaleBand()
-    .domain(genreMini.map(d => d.year))
-    .range([0,width]).padding(0.2);
+    // draw layers
+    const y = d3.scaleLinear().domain([0, yMax]).nice().range([height,0]);
+    g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
+    g.append("g").call(d3.axisLeft(y));
 
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(stacked[stacked.length - 1], d => d[1])]).nice()
-    .range([height,0]);
+    const groups = g.selectAll("g.layer").data(stacked, s=>s.key).join(
+      enter => enter.append("g").attr("class","layer").attr("fill", s => color(s.key)),
+      update => update.attr("fill", s => color(s.key)),
+      exit => exit.remove()
+    );
 
-  g.append("g").attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
-  g.append("g").call(d3.axisLeft(y));
+    groups.selectAll("rect")
+      .data(d => d, d => d.data.year)
+      .join(
+        enter => enter.append("rect")
+          .attr("x", d=> x(d.data.year))
+          .attr("y", d=> y(d[1]))
+          .attr("height", d=> y(d[0]) - y(d[1]))
+          .attr("width", x.bandwidth())
+          .on("mousemove", (event, d) => {
+            const genre = d3.select(event.currentTarget.parentNode).datum().key;
+            const count = d.data[genre];
+            chartTip.style("opacity", 1)
+              .html(`<strong>Year:</strong> ${d.data.year}<br/><strong>Genre:</strong> ${genre}<br/><strong>Count:</strong> ${count}`)
+              .style("left", (event.pageX + 10) + "px")
+              .style("top", (event.pageY - 28) + "px");
+          })
+          .on("mouseout", () => chartTip.style("opacity", 0)),
+        update => update
+          .transition().duration(250)
+          .attr("x", d=> x(d.data.year))
+          .attr("y", d=> y(d[1]))
+          .attr("height", d=> y(d[0]) - y(d[1]))
+          .attr("width", x.bandwidth()),
+        exit => exit.remove()
+      );
 
-  const groups = g.selectAll("g.layer")
-    .data(stacked)
-    .join("g")
-    .attr("class","layer")
-    .attr("fill", d => color(d.key));
-
-  groups.selectAll("rect")
-    .data(d => d)
-    .join("rect")
-    .attr("x", d => x(d.data.year))
-    .attr("y", d => y(d[1]))
-    .attr("height", d => y(d[0]) - y(d[1]))
-    .attr("width", x.bandwidth())
-    .on("mousemove", (event, d) => {
-      const genre = d3.select(event.currentTarget.parentNode).datum().key;
-      const count = d.data[genre];
-      chartTip.style("opacity", 1)
-        .html(`<strong>Year:</strong> ${d.data.year}<br/><strong>Genre:</strong> ${genre}<br/><strong>Count:</strong> ${count}`)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY - 28) + "px");
-    })
-    .on("mouseout", () => chartTip.style("opacity", 0));
+    // inline legend filtered to selection
+    const legend = g.selectAll("g.inlineLegend").data([0]).join("g").attr("class","inlineLegend")
+      .attr("transform", `translate(${width+8},0)`);
+    const items = legend.selectAll("g.item").data(keys, d=>d).join(
+      enter => {
+        const it = enter.append("g").attr("class","item");
+        it.append("rect").attr("width", 12).attr("height", 12).attr("rx",2).attr("ry",2).attr("fill", d=>color(d));
+        it.append("text").attr("x", 16).attr("y", 10).attr("fill","#e8edf7").attr("font-size", 12).text(d=>d);
+        return it;
+      },
+      update => update,
+      exit => exit.remove()
+    ).attr("transform", (d,i)=> `translate(0, ${i*16})`);
+  } else {
+    // draw axes with zeroed y (for visual stability)
+    const y = d3.scaleLinear().domain([0, yMax]).range([height,0]);
+    g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
+    g.append("g").call(d3.axisLeft(y));
+  }
 }
 
 function renderFeatureRange(feature="tempo", startYear=1980, endYear=2020){
   clearChart();
-
   const data = audioData.filter(d=> d.year >= startYear && d.year <= endYear);
-
   const x = d3.scaleLinear().domain([startYear, endYear]).range([0,width]);
   const yMin = d3.min(data, d=> d[feature]);
   const yMax = d3.max(data, d=> d[feature]);
-
-  // padding / clamping
   let padMin = yMin * 0.95, padMax = yMax * 1.05;
   if (["danceability","energy","acousticness"].includes(feature)){
     padMin = Math.max(0, yMin - 0.05);
     padMax = Math.min(1, yMax + 0.05);
   }
   const y = d3.scaleLinear().domain([padMin, padMax]).range([height, 0]);
-
-  g.append("g").attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+  g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
   g.append("g").call(d3.axisLeft(y));
-
-  const area = d3.area()
-    .x(d=> x(d.year))
-    .y0(height)
-    .y1(d=> y(d[feature]))
-    .curve(d3.curveMonotoneX);
-
-  g.append("path")
-    .datum(data)
-    .attr("fill", featureColors[feature] || "#60a5fa")
-    .attr("opacity", 0.8)
-    .attr("d", area);
-
-  g.selectAll(".dot")
-   .data(data)
-   .enter()
-   .append("circle")
-   .attr("class","dot")
-   .attr("cx", d=> x(d.year))
-   .attr("cy", d=> y(d[feature]))
-   .attr("r", 4)
-   .attr("fill", "#000")
-   .attr("stroke", "#fff")
-   .on("mouseover", function(event,d){
+  const area = d3.area().x(d=> x(d.year)).y0(height).y1(d=> y(d[feature])).curve(d3.curveMonotoneX);
+  g.append("path").datum(data).attr("fill", featureColors[feature] || "#60a5fa").attr("opacity", 0.8).attr("d", area);
+  g.selectAll(".dot").data(data).enter().append("circle").attr("class","dot")
+    .attr("cx", d=> x(d.year)).attr("cy", d=> y(d[feature])).attr("r", 4).attr("fill", "#000").attr("stroke", "#fff")
+    .on("mouseover", function(event,d){
       const v = ["danceability","energy","acousticness"].includes(feature)
                 ? d[feature].toFixed(3)
                 : (feature==="tempo" ? d[feature].toFixed(3) : Math.round(d[feature]));
-      chartTip.style("opacity", 1)
-        .html(`Year: ${d.year}<br>${feature}: ${v}`)
-        .style("left",(event.pageX+10)+"px")
-        .style("top",(event.pageY-28)+"px");
-   })
-   .on("mousemove", function(event){
-      chartTip.style("left",(event.pageX+10)+"px").style("top",(event.pageY-28)+"px");
-   })
-   .on("mouseout", function(){ chartTip.style("opacity", 0); });
+      chartTip.style("opacity", 1).html(`Year: ${d.year}<br>${feature}: ${v}`)
+        .style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", () => chartTip.style("opacity", 0));
 }
 
-// ------------------ INIT & TOGGLE ------------------
-const legendBtns = document.querySelectorAll(".legend button");
-let currentView = document.querySelector(".legend button.active")?.dataset.view || "genre";
+// ------------------ VIEW ROUTER ------------------
+const viewButtons = d3.selectAll('.legend button');
+let currentView = 'genre';
+let selectedGenres = new Set(allGenreKeys); // start with all selected
 
-function showGenre() {
-  renderGenre();
-  buildLegend();
+function setView(view){
+  currentView = view;
+  viewButtons.classed('active', function(){ return d3.select(this).attr('data-view') === view; });
+  if (view === 'genre') {
+    buildGenreControls(selectedGenres);
+    renderGenre([...selectedGenres]);
+  } else {
+    buildFeatureSlider(1980, 2020, (a,b)=> renderFeatureRange(view, a, b));
+    renderFeatureRange(view, 1980, 2020);
+  }
 }
 
-function showFeature(feature) {
-  // build slider and render; slider drives re-render
-  buildYearSlider(1980, 2020, (ys, ye) => renderFeatureRange(feature, ys, ye));
-  renderFeatureRange(feature, 1980, 2020);
-}
-
-if (currentView === "genre") showGenre(); else showFeature(currentView);
-
-legendBtns.forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    legendBtns.forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    currentView = btn.dataset.view;
-
-    if (currentView === "genre") {
-      showGenre();
-    } else {
-      showFeature(currentView); // currentView is the feature name
-    }
-  });
-});
+viewButtons.on('click', function(){ setView(this.getAttribute('data-view')); });
+setView('genre');
 </script>
 </body>
 </html>
