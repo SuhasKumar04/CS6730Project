@@ -818,45 +818,97 @@ function buildGenreControls(selectedSet){
   // }
 }
 
+
 function buildFeatureSlider(start=1980, end=2020, onChange){
   const wrap = d3.select("#rightContent");
   wrap.selectAll("*").remove();
 
-  wrap.append("div").attr("class","tiny").text("Year Range");
-  const slider = wrap.append("div").style("width","90%")
-    .style("height","28px").style("position","relative");
-  slider.append("div").style("position","absolute").style("left","0").style("right","0").style("top","50%")
-    .style("height","6px").style("transform","translateY(-50%)").style("background","#2b3c6f").style("border-radius","3px");
-  const rangeEl = slider.append("div").style("position","absolute").style("height","6px").style("background","#6ea8fe").style("border-radius","3px");
-  const hMin = slider.append("div").style("position","absolute").style("width","16px").style("height","16px").style("background","#6ea8fe").style("border","1px solid rgba(255,255,255,.35)").style("border-radius","50%")
-    .style("top","50%").style("transform","translate(-50%,-50%)").style("cursor","pointer");
-  const hMax = slider.append("div").style("position","absolute").style("width","16px").style("height","16px").style("background","#6ea8fe").style("border","1px solid rgba(255,255,255,.35)").style("border-radius","50%")
-    .style("top","50%").style("transform","translate(-50%,-50%)").style("cursor","pointer");
-  const tMin = slider.append("div").attr("class","tiny").style("position","absolute");
-  const tMax = slider.append("div").attr("class","tiny").style("position","absolute");
-  const label = wrap.append("div").attr("class","tiny");
+  // Title
+  wrap.append("div").attr("class","tiny")
+    .style("margin-bottom","8px")
+    .text("Year Range");
+
+  // Slider container
+  const sliderWrap = wrap.append("div")
+    .style("display","flex")
+    .style("justify-content","center")   // centers horizontally
+    .style("align-items","center")       // aligns vertically if needed
+    .style("width","100%");
+
+  const slider = sliderWrap.append("div")
+    .style("width","80%")                // adjust width as desired
+    .style("height","36px")
+    .style("position","relative");
+
+  // (optional faint track) – keep or remove
+  slider.append("div")
+    .style("position","absolute").style("left","0").style("right","0")
+    .style("top","50%").style("height","6px").style("transform","translateY(-50%)")
+    .style("background","#2b3c6f").style("border-radius","3px");
+
+  const rangeEl = slider.append("div")
+    .style("position","absolute").style("height","6px")
+    .style("background","#6ea8fe").style("border-radius","3px")
+    .style("top","50%").style("transform","translateY(-50%)");
+
+  const hMin = slider.append("div")
+    .style("position","absolute").style("width","16px").style("height","16px")
+    .style("background","#6ea8fe").style("border","1px solid rgba(255,255,255,.35)")
+    .style("border-radius","50%").style("top","50%")
+    .style("transform","translate(-50%,-50%)").style("cursor","pointer");
+
+  const hMax = slider.append("div")
+    .style("position","absolute").style("width","16px").style("height","16px")
+    .style("background","#6ea8fe").style("border","1px solid rgba(255,255,255,.35)")
+    .style("border-radius","50%").style("top","50%")
+    .style("transform","translate(-50%,-50%)").style("cursor","pointer");
+
+  // Create but HIDE the per-handle labels
+  const tMin = slider.append("div").attr("class","tiny")
+    .style("position","absolute").style("display","none");
+  const tMax = slider.append("div").attr("class","tiny")
+    .style("position","absolute").style("display","none");
+
+  // Only this label shows, centered under bar
+  const label = wrap.append("div").attr("class","tiny")
+    .style("margin-top","8px").style("text-align","center");
 
   const minYear = d3.min(audioData, d=>d.year), maxYear = d3.max(audioData, d=>d.year);
   let yearStart=start, yearEnd=end; const minGap=5;
+
   const node = slider.node();
   const sliderW = () => node.getBoundingClientRect().width;
   const yearToX = y => ((y-minYear)/(maxYear-minYear))*sliderW();
   const xToYear = x => Math.round(minYear + (x/sliderW())*(maxYear-minYear));
+
   function update(){
     const xMin = yearToX(yearStart), xMax = yearToX(yearEnd);
-    hMin.style("left", xMin+"px"); hMax.style("left", xMax+"px");
+    hMin.style("left", xMin+"px"); 
+    hMax.style("left", xMax+"px");
     rangeEl.style("left", xMin+"px").style("width", (xMax-xMin)+"px");
-    tMin.style("left", xMin+"px").style("transform","translate(-50%,-170%)").text(yearStart);
-    tMax.style("left", xMax+"px").style("transform","translate(-50%,-170%)").text(yearEnd);
+
+    // keep these hidden; no numbers under the handles
+    // tMin/tMax exist but are not visible
+
     label.text(`${yearStart} – ${yearEnd}`);
     onChange(yearStart, yearEnd);
   }
-  const dragMin = d3.drag().on("drag", (e)=>{ let x=e.x; x=Math.min(x, yearToX(yearEnd-minGap)); x=Math.max(0,x); yearStart=xToYear(x); update(); });
-  const dragMax = d3.drag().on("drag", (e)=>{ let x=e.x; x=Math.max(x, yearToX(yearStart+minGap)); x=Math.min(sliderW(),x); yearEnd=xToYear(x); update(); });
-  d3.select(hMin.node()).call(dragMin); d3.select(hMax.node()).call(dragMax);
+
+  const dragMin = d3.drag().on("drag",(e)=>{
+    let x=e.x; x=Math.min(x, yearToX(yearEnd-minGap)); x=Math.max(0,x);
+    yearStart=xToYear(x); update();
+  });
+  const dragMax = d3.drag().on("drag",(e)=>{
+    let x=e.x; x=Math.max(x, yearToX(yearStart+minGap)); x=Math.min(sliderW(),x);
+    yearEnd=xToYear(x); update();
+  });
+
+  d3.select(hMin.node()).call(dragMin);
+  d3.select(hMax.node()).call(dragMax);
   update();
   window.addEventListener('resize', update, {passive:true});
 }
+
 
 // ------------------ RENDERERS ------------------
 function renderGenre(selectedKeys){
