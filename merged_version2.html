@@ -1368,8 +1368,10 @@ function renderGenre(selectedKeys){
 
   if (keys.length){
     const stacked = d3.stack().keys(keys)(genreMini);
-    yMax = d3.max(stacked[stacked.length-1], d=>d[1]);
-    const y = d3.scaleLinear().domain([0,yMax]).nice().range([height,0]);
+    const y = d3.scaleLinear()
+        .domain([0, 10])
+        .range([height, 0])
+        .nice();
 
     g.append("g").attr("transform",`translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
@@ -1411,7 +1413,10 @@ function renderGenre(selectedKeys){
         exit => exit.remove()
       );
   } else {
-    const y = d3.scaleLinear().domain([0,yMax]).range([height,0]);
+    const y = d3.scaleLinear()
+        .domain([0, 10])
+        .range([height, 0])
+        .nice();
     g.append("g").attr("transform",`translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
     g.append("g")
