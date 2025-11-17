@@ -6,192 +6,217 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
 <style>
-  :root { --ink: #e8edf7; }
-  body { margin:0; background:#4E69C3; color:var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+:root { --ink: #e8edf7; }
+body { 
+  margin:0; 
+  background:#4E69C3; 
+  color:var(--ink); 
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  overflow:hidden;
+}
 
-  .boombox {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-  }
-  .region {
-    position: absolute;
-    z-index: 1; /* ensures everything stays on top of the SVG background */
-  }
+/* --- New: Fixed aspect ratio wrapper (1285×755) --- */
+.aspect-wrapper {
+  position: fixed;
+  left: 0; top: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  .region { position: absolute; overflow: hidden; display: grid; place-items: center; pointer-events: auto; }
+/* This is your responsive-but-proportional container */
+.boombox {
+  position: relative;
+  width: min(100vw, 100vh * (1285 / 755));
+  height: calc(min(100vw, 100vh * (1285 / 755)) * (755 / 1285));
+  overflow: hidden;
+  background: #4E69C3;
+}
 
-  /* Center screen */
-  #center-rect { left: 25%; top: 35%; width: 50%; height: 60%; background: #2D2C5E; border-radius: 6px; }
-  #center-rect svg { width: 100%; height: 100%; display: block; }
+/* All regions are now positioned relative to the fixed-ratio box */
+.region {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
 
-  /* Speaker circles */
-  #left-circle, #right-circle { width: 20%; aspect-ratio: 1 / 1; border-radius: 50%; background: #2D2C5E; }
-  #left-circle  { left: 3%;  top: 60%; transform: translateY(-20%); }
-  #right-circle { right: 3%; top: 60%; transform: translateY(-20%); }
+/* --- Your original % layout now behaves correctly --- */
 
-  .circle-card {
-    width: 80%;
-    height: 80%;
-    background: #2D2C5E;
-    border: 1px solid #2D2C5E;
-    border-radius: 50%;
-    display: grid; place-items: center;
-    padding: 8px;
-    text-align: center;
-  }
+/* Center screen */
+#center-rect { 
+  left: 25%; 
+  top: 35%; 
+  width: 50%; 
+  height: 60%; 
+  background: #2D2C5E; 
+  border-radius: 6px; 
+}
+#center-rect svg { width: 100%; height: 100%; display: block; }
 
-  #leftContent { width: 95%; color:#e8edf7; font-size: 10px; }
-  #leftContent h4 { margin: 4px 0 8px; font-size: 14px; }
+/* Speaker circles */
+#left-circle, #right-circle { 
+  width: 20%; 
+  aspect-ratio: 1 / 1; 
+  border-radius: 50%; 
+  background: #2D2C5E; 
+}
+#left-circle  { left: 3%;  top: 60%; transform: translateY(-20%); }
+#right-circle { right: 3%; top: 60%; transform: translateY(-20%); }
 
-  /* Right-side generic */
-  #rightContent { width: 88%; color:#e8edf7; font-size: 13px; }
-  #rightContent h4 { margin: 4px 0 8px; font-size: 16px; }
+.circle-card {
+  width: 80%;
+  height: 80%;
+  background: #2D2C5E;
+  border: 1px solid #2D2C5E;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  padding: 8px;
+  text-align: center;
+}
 
-  .tiny { font-size: 11px; opacity: .85; }
+/* left content */
+#leftContent { width: 95%; color:#e8edf7; font-size: 10px; }
+#leftContent h4 { margin: 4px 0 8px; font-size: 14px; }
 
-  /* Genre multi-select UI */
-  .ctl-row { display:flex; align-items:center; justify-content:center; gap:6px; margin: 6px 0 8px; flex-wrap:wrap; }
-  .pill {
+/* right content */
+#rightContent { width: 88%; color:#e8edf7; font-size: 13px; }
+#rightContent h4 { margin: 4px 0 8px; font-size: 16px; }
+
+.tiny { font-size: 11px; opacity: .85; }
+
+/* Genre multi-select */
+.ctl-row { display:flex; align-items:center; justify-content:center; gap:6px; margin: 6px 0 8px; flex-wrap:wrap; }
+.pill {
   font-size: 10px;
   padding:4px 8px;
   border-radius: 999px;
   border:1px solid rgba(255,255,255,.25);
-  background:#4c5fa0;      /* lighter blue */
+  background:#4c5fa0;
   color:#f4f6ff;
   cursor:pointer;
 }
-.pill:hover {
-  background:#6f82c8;       /* lighter hover */
+.pill:hover { background:#6f82c8; }
+
+.genre-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; max-height: 64%; overflow:auto; padding-right:4px; }
+.genre-item { display:flex; align-items:center; gap:6px; }
+.swatch { width: 10px; height:10px; border-radius:2px; display:inline-block; }
+.empty-note { font-size: 12px; opacity:.9; text-align:center; margin-top: 8px; }
+
+/* Feature slider */
+.slider-container { position: relative; height: 28px; margin: 10px 0 2px; }
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(7,12,28,0.95);
+  color: #e8edf7;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 6px 8px;
+  font-size: 13px;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  z-index: 9999;
 }
-  .genre-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; max-height: 64%; overflow:auto; padding-right:4px; }
-  .genre-item { display:flex; align-items:center; gap:6px; }
-  .swatch { width: 10px; height:10px; border-radius:2px; display:inline-block; }
-  .empty-note { font-size: 12px; opacity:.9; text-align:center; margin-top: 8px; }
 
-  /* Feature slider */
-  .slider-container { position: relative; height: 28px; margin: 10px 0 2px; }
+/* Decade picker */
+.picker{ display:grid; gap:12px; width:100%; }
+.picker h4{
+  margin:2px 0 4px;
+  font-size:14px;
+  text-align:center;
+  opacity:.95;
+}
+.picker .grid-2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:10px;
+}
 
-  /* Tooltip for charts */
-  .tooltip {
-    position: absolute;
-    background: rgba(7,12,28,0.95);
-    color: #e8edf7;
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 6px 8px;
-    font-size: 13px;
-    pointer-events: none;
-    opacity: 0;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    z-index: 9999;
-  }
+/* Chart text */
+#center-rect svg text {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
 
-  /* === Decade comparison picker (circles) === */
-  .picker{ display:grid; gap:12px; width:100%; }
-  .picker h4{
-    margin:2px 0 4px;
-    font-size:14px;
-    text-align:center;
-    opacity:.95;
-  }
-  .picker .grid-2{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:10px;
-  }
+.chart-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  fill: #f9fafb;
+}
 
-  /* Chart typography */
-  #center-rect svg text {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
+.x-axis-label,
+.y-axis-label {
+  font-size: 12px;
+  fill: #cbd5f5;
+  opacity: 0.9;
+}
 
-  /* Title + axis labels */
-  .chart-title {
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    fill: #f9fafb;
-  }
+#center-rect svg g.tick text {
+  font-size: 11px;
+  fill: #9ca9d9;
+}
 
-  .x-axis-label,
-  .y-axis-label {
-    font-size: 12px;
-    fill: #cbd5f5;
-    opacity: 0.9;
-  }
+#center-rect svg .domain,
+#center-rect svg .tick line {
+  stroke: #1f2a4d;
+  stroke-width: 1;
+}
 
-  /* Tick labels */
-  #center-rect svg g.tick text {
-    font-size: 11px;
-    fill: #9ca9d9;
-  }
-
-  /* Axis lines */
-  #center-rect svg .domain,
-  #center-rect svg .tick line {
-    stroke: #1f2a4d;
-    stroke-width: 1;
-  }
 </style>
 </head>
 
 <body>
-  <div class="boombox">
-    <svg id="boombox-bg" viewBox="0 0 1500 800" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:0;">
-      
-      <!-- Background Rectangles -->
-      <rect x="142" y="29" width="1205" height="172" rx="30" fill="none" stroke="#2D2C5E" stroke-width="10"/>
-      <rect x="11" y="172" width="1468" height="657" rx="20" fill="#3D4B91"/>
-      <rect x="10" y="153" width="1468" height="104" rx="15" fill="#2D2C5E"/>
+  <div class="aspect-wrapper">
+    <div class="boombox">
 
-      <!-- title -->
-      <text x="400" y="215" fill="#e8edf7" font-size="30" font-family="system-ui, sans-serif">
-        Music Data Explorer: Top 10 Songs per Year 1980–2020
-      </text>
+      <svg id="boombox-bg" viewBox="0 0 1500 800" preserveAspectRatio="xMidYMid meet" 
+          style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:0;">
+        <!-- your SVG background unchanged -->
+        <rect x="142" y="29" width="1205" height="172" rx="30" fill="none" stroke="#2D2C5E" stroke-width="10"/>
+        <rect x="11" y="172" width="1468" height="657" rx="20" fill="#3D4B91"/>
+        <rect x="10" y="153" width="1468" height="104" rx="15" fill="#2D2C5E"/>
 
-      <!-- Horizontal Button Rectangles -->
-      <rect id="btn-genre"        data-view="genre"        x="202"  y="102" width="129" height="51" rx="10" fill="#58508D"/>
-      <rect id="btn-tempo"        data-view="tempo"        x="364"  y="102" width="129" height="51" rx="10" fill="#8A508F"/>
-      <rect id="btn-danceability" data-view="danceability" x="526"  y="102" width="129" height="51" rx="10" fill="#BC5090"/>
-      <rect id="btn-energy"       data-view="energy"       x="689"  y="102" width="129" height="53" rx="10" fill="#DE5A79"/>
-      <rect id="btn-acousticness" data-view="acousticness" x="853"  y="102" width="129" height="53" rx="10" fill="#FF6361"/>
-      <rect id="btn-duration"     data-view="duration_ms"  x="1015" y="102" width="129" height="53" rx="10" fill="#FF8531"/>
-      <rect id="btn-decade"       data-view="decade"       x="1178" y="102" width="129" height="51" rx="10" fill="#FFA600"/>
+        <text x="400" y="215" fill="#e8edf7" font-size="30">Music Data Explorer: Top 10 Songs per Year 1980–2020</text>
 
-      <!-- Text Labels on Buttons -->
-      <text x="237"  y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Genre</text>
-      <text x="399"  y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Tempo</text>
-      <text x="551"  y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Danceability</text>
-      <text x="724"  y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Energy</text>
-      <text x="873"  y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Acousticness</text>
-      <text x="1050" y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Duration</text>
-      <text x="1213" y="135" fill="#e8edf7" font-size="14" font-family="system-ui, sans-serif">Decade</text>
-    </svg>
-  </div>
+        <rect id="btn-genre"        data-view="genre"        x="202"  y="102" width="129" height="51" rx="10" fill="#58508D"/>
+        <rect id="btn-tempo"        data-view="tempo"        x="364"  y="102" width="129" height="51" rx="10" fill="#8A508F"/>
+        <rect id="btn-danceability" data-view="danceability" x="526"  y="102" width="129" height="51" rx="10" fill="#BC5090"/>
+        <rect id="btn-energy"       data-view="energy"       x="689"  y="102" width="129" height="53" rx="10" fill="#DE5A79"/>
+        <rect id="btn-acousticness" data-view="acousticness" x="853"  y="102" width="129" height="53" rx="10" fill="#FF6361"/>
+        <rect id="btn-duration"     data-view="duration_ms"  x="1015" y="102" width="129" height="53" rx="10" fill="#FF8531"/>
+        <rect id="btn-decade"       data-view="decade"       x="1178" y="102" width="129" height="51" rx="10" fill="#FFA600"/>
 
-  <!-- center: main plot -->
-  <div id="center-rect" class="region">
-    <svg id="mainChart" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
+        <text x="237"  y="135" fill="#e8edf7" font-size="14">Genre</text>
+        <text x="399"  y="135" fill="#e8edf7" font-size="14">Tempo</text>
+        <text x="551"  y="135" fill="#e8edf7" font-size="14">Danceability</text>
+        <text x="724"  y="135" fill="#e8edf7" font-size="14">Energy</text>
+        <text x="873"  y="135" fill="#e8edf7" font-size="14">Acousticness</text>
+        <text x="1050" y="135" fill="#e8edf7" font-size="14">Duration</text>
+        <text x="1213" y="135" fill="#e8edf7" font-size="14">Decade</text>
+      </svg>
 
-  <!-- left: dynamic info / controls -->
-  <div id="left-circle" class="region">
-    <div class="circle-card">
-      <div id="leftContent"></div>
+      <div id="center-rect" class="region">
+        <svg id="mainChart" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+
+      <div id="left-circle" class="region">
+        <div class="circle-card"><div id="leftContent"></div></div>
+      </div>
+
+      <div id="right-circle" class="region">
+        <div class="circle-card"><div id="rightContent"></div></div>
+      </div>
+
+      <div class="tooltip" id="tooltip"></div>
     </div>
   </div>
-
-  <!-- right: dynamic controls -->
-  <div id="right-circle" class="region">
-    <div class="circle-card">
-      <div id="rightContent"></div>
-    </div>
-  </div>
-
-  <!-- tooltip -->
-  <div class="tooltip" id="tooltip"></div>
 
 <script>
 
@@ -1725,6 +1750,7 @@ window.onload = () => {
 
   setView('genre');
 };
+
 </script>
 </body>
 </html>
