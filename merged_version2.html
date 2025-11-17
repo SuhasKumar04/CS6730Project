@@ -1373,7 +1373,9 @@ function renderGenre(selectedKeys){
 
     g.append("g").attr("transform",`translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
-    g.append("g").call(d3.axisLeft(y));
+    g.append("g").call(d3.axisLeft(y)
+      .ticks(yMax)             // one tick per integer up to yMax
+      .tickFormat(d3.format("d")));  // format as integer, no decimals);
 
     const groups = g.selectAll("g.layer")
       .data(stacked, s=>s.key)
@@ -1412,7 +1414,10 @@ function renderGenre(selectedKeys){
     const y = d3.scaleLinear().domain([0,yMax]).range([height,0]);
     g.append("g").attr("transform",`translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues(x.domain().filter((d,i)=>!(i%5))));
-    g.append("g").call(d3.axisLeft(y));
+    g.append("g")
+      .call(d3.axisLeft(y)
+        .ticks(yMax)             // one tick per integer up to yMax
+        .tickFormat(d3.format("d")))  // format as integer, no decimals);
   }
   // Axis titles + Chart title
   g.append("text")
@@ -1459,14 +1464,18 @@ function renderFeatureRange(feature="tempo", startYear=1980, endYear=2020){
   const rawFeature = (feature === "duration_ms") ? "duration_sec" : feature;
   const yMin = d3.min(data, d => d[rawFeature]);
   const yMax = d3.max(data, d => d[rawFeature]);
-  //const yMin = d3.min(data, d=> d[feature]);
-  //const yMax = d3.max(data, d=> d[feature]);
-  let padMin = yMin*0.95, padMax = yMax*1.05;
+  let padMax = yMax * 1.05;
+
   if (["danceability","energy","acousticness"].includes(feature)){
-    padMin = Math.max(0,yMin-0.05);
     padMax = Math.min(1,yMax+0.05);
+    padMin = 0
+  } else {
+    padMin = 0;
   }
-  const y = d3.scaleLinear().domain([padMin,padMax]).range([height,0]);
+  const y = d3.scaleLinear()
+    .domain([padMin, padMax])
+    .range([height, 0])
+    .nice();
 
   g.append("g").attr("transform",`translate(0,${height})`)
     .call(d3.axisBottom(x).tickFormat(d3.format("d")));
