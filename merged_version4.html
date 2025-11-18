@@ -201,7 +201,7 @@ body {
         <text x="724"  y="135" fill="#e8edf7" font-size="14">Energy</text>
         <text x="873"  y="135" fill="#e8edf7" font-size="14">Acousticness</text>
         <text x="1050" y="135" fill="#e8edf7" font-size="14">Duration</text>
-        <text x="1213" y="135" fill="#e8edf7" font-size="14">Decade</text>
+        <text x="1188" y="135" fill="#e8edf7" font-size="12">Decade Comparison</text>
       </svg>
 
       <div id="center-rect" class="region">
@@ -1578,11 +1578,11 @@ function renderGenreWithSlider(startYear, endYear){
 
 // descriptions for features (left side in feature view)
 const featureDescriptions = {
-  danceability: `Danceability describes how suitable a track is for dancing, based on musical elements like tempo, rhythm stability, beat strength, and overall regularity. The score ranges from 0.0 (least danceable) to 1.0 (most danceable).`,
+  danceability: `Danceability describes how suitable a track is for dancing, based on musical elements like tempo, rhythm stability, and overall regularity. The score ranges from 0.0 (least danceable) to 1.0 (most danceable).`,
   tempo: `Tempo represents the speed of a track in beats per minute (BPM). Higher tempo usually means faster, more energetic music.`,
-  energy: `Energy measures the intensity and activity of a track. Higher energy tracks are fast, loud, and dynamic; lower energy tracks are calmer and softer.`,
-  acousticness: `Acousticness estimates the likelihood that a track is acoustic. Higher values indicate more acoustic instrumentation.`,
-  duration_ms: `Duration is the length of a track in seconds. Longer tracks may allow for more complex musical arrangements.`
+  energy: `Energy measures the intensity and activity of a track. Higher energy tracks are fast, loud, and dynamic. Lower energy tracks are calmer and softer.`,
+  acousticness: `Acousticness assesses the amount of live instrumentation in a track. Higher values indicate more live instrumentation and lower values indicate more electronic processing.`,
+  duration_ms: `Duration is the length of a track in seconds.`
 };
 
 function updateFeatureDescription(feature) {
@@ -1593,7 +1593,7 @@ function updateFeatureDescription(feature) {
     leftWrap.append("h4").text(featureLabel[feature] || feature);
     leftWrap.append("p")
       .style("color","#e8edf7")
-      .style("font-size","14px")
+      .style("font-size","12px")
       .style("line-height","1.4em")
       .text(featureDescriptions[feature]);
   }
