@@ -15,7 +15,7 @@ body {
   overflow:hidden;
 }
 
-/* --- New: Fixed aspect ratio wrapper (1285×755) --- */
+/* aspect ratio wrapper */
 .aspect-wrapper {
   position: fixed;
   left: 0; top: 0;
@@ -26,7 +26,7 @@ body {
   justify-content: center;
 }
 
-/* This is your responsive-but-proportional container */
+
 .boombox {
   position: relative;
   width: min(100vw, 100vh * (1285 / 755));
@@ -35,7 +35,7 @@ body {
   background: #4E69C3;
 }
 
-/* All regions are now positioned relative to the fixed-ratio box */
+
 .region {
   position: absolute;
   z-index: 2;
@@ -45,7 +45,6 @@ body {
   pointer-events: auto;
 }
 
-/* --- Your original % layout now behaves correctly --- */
 
 /* Center screen */
 #center-rect { 
@@ -74,9 +73,9 @@ body {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  padding: 0;             /* we’ll scale inner content with transform */
+  padding: 0;             
   text-align: center;
-  position: relative;      /* for absolute child scaling */
+  position: relative;      
   overflow: hidden;
 }
 
@@ -180,7 +179,7 @@ body {
 
       <svg id="boombox-bg" viewBox="0 0 1500 800" preserveAspectRatio="xMidYMid meet" 
           style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:0;">
-        <!-- your SVG background unchanged -->
+        <!-- SVG background -->
         <rect x="142" y="29" width="1205" height="172" rx="30" fill="none" stroke="#2D2C5E" stroke-width="10"/>
         <rect x="11" y="172" width="1468" height="657" rx="20" fill="#3D4B91"/>
         <rect x="10" y="153" width="1468" height="104" rx="15" fill="#2D2C5E"/>
@@ -807,13 +806,12 @@ const songsByYearData = {
     {"year":2020,"rank":9,"track_name":"The Bones","artist_name":"Maren Morris","danceability":0.612,"acousticness":0.278,"energy":0.57,"tempo":77.002,"duration_ms":197293},
     {"year":2020,"rank":10,"track_name":"Someone You Loved","artist_name":"Lewis Capaldi","danceability":0.708,"acousticness":0.756,"energy":0.416,"tempo":109.87,"duration_ms":179840}
   ]};
-// ======== globals from your data ========
-// assumes songsByYearData, audioData, genreMini are already defined globally
+
 let songsByYear = new Map(Object.entries(songsByYearData).map(([y, arr]) => [Number(y), arr]));
 let songsReady = true;
 let currentSliderResizeHandler = null;
 
-// ============ shared helpers for feature tooltip ============
+// helpers for feature tooltip 
 const featureCsvKey = f => f;
 
 const featureLabel = {
@@ -859,13 +857,13 @@ function buildTooltipHtml(year, feature, avgValue, songs) {
   `;
 }
 
-// Chart title helper (from code B, tweaked)
+
 function setChartTitle(text){
   g.selectAll(".chart-title").remove();
   g.append("text")
     .attr("class","chart-title")
     .attr("x", width / 2)
-    .attr("y", -10)        // slightly lower
+    .attr("y", -10)       
     .attr("text-anchor","middle")
     .text(text);
 }
@@ -882,7 +880,7 @@ function prettyMetricName(k){
   return map[k] || k;
 }
 
-// ================= CHART SETUP =================
+// CHART SETUP 
 const svg = d3.select("#mainChart");
 const margin = {top:20,right:20,bottom:40,left:55};
 const width  = 900 - margin.left - margin.right;
@@ -913,43 +911,14 @@ const featureColors = {
   duration_ms:"#ff8531"
 };
 
-// ================= RIGHT / LEFT UI BUILDERS =================
 
-// Genre controls (left circle) for genre view
+// Genre controls for genre view
 let currentYearRange = [1980, 2020];
 let selectedGenres = new Set(allGenreKeys); // Default: all genres selected
 
 function updateGenreChart() {
   renderGenre([...selectedGenres], currentYearRange[0], currentYearRange[1]);
 }
-
-// function buildGenreControls(selectedSet){
-//   const wrap = d3.select("#leftContent");
-//   wrap.selectAll("*").remove();
-
-//   wrap.append("h4").text("Select genres to display");
-
-//   const grid = wrap.append("div").attr("class","genre-grid");
-
-//   const row = grid.selectAll("label.genre-item")
-//     .data(allGenreKeys, d=>d)
-//     .join("label")
-//     .attr("class","genre-item");
-
-//   row.append("input")
-//     .attr("type","checkbox")
-//     .property("checked", d=> selectedSet.has(d))
-//     .on("change", function(evt, d){
-//       if(this.checked) selectedSet.add(d);
-//       else selectedSet.delete(d);
-//       updateGenreChart();
-//     });
-
-//   row.append("span").attr("class","swatch")
-//     .style("background", d=> color(d));
-
-//   row.append("span").text(d=> d);
-// }
 
 function buildGenreControls(selectedSet){
   const wrap = d3.select("#leftContent");
@@ -966,8 +935,8 @@ function buildGenreControls(selectedSet){
     .on("click", () => {
       selectedSet.clear();
       allGenreKeys.forEach(k => selectedSet.add(k));
-      updateGenreChart();            // redraw with all
-      buildGenreControls(selectedSet); // refresh checkboxes
+      updateGenreChart();            
+      buildGenreControls(selectedSet); 
     });
 
   actions.append("button")
@@ -975,8 +944,8 @@ function buildGenreControls(selectedSet){
     .text("None")
     .on("click", () => {
       selectedSet.clear();
-      updateGenreChart();              // redraw with none
-      buildGenreControls(selectedSet); // refresh checkboxes
+      updateGenreChart();             
+      buildGenreControls(selectedSet); 
     });
 
   const grid = wrap.append("div").attr("class","genre-grid");
@@ -1078,12 +1047,12 @@ function buildFeatureSlider(start=1980, end=2020, onChange){
   d3.select(hMin.node()).call(dragMin);
   d3.select(hMax.node()).call(dragMax);
   update();
-//   window.addEventListener('resize', update, {passive:true});
+
   d3.select(hMin.node()).call(dragMin);
   d3.select(hMax.node()).call(dragMax);
   update();
 
-  // 🔁 Manage resize handler so old sliders don't keep firing
+ 
   if (currentSliderResizeHandler) {
     window.removeEventListener('resize', currentSliderResizeHandler);
   }
@@ -1092,7 +1061,7 @@ function buildFeatureSlider(start=1980, end=2020, onChange){
 }
 
 
-/* ======= Decade comparison UI (A layout, B logic) ======= */
+/* Decade comparison UI  */
 const decadeLabels = ["1980s","1990s","2000s","2010s"];
 
 function decadeRange(label){
@@ -1107,7 +1076,7 @@ function getFeatureSamplesForDecade(feature, decLabel, {preferPerSong=true} = {}
   const out = [];
 
   const songsObj = (typeof songsByYearData !== "undefined") ? songsByYearData : null;
-  const convert = v => feature === "duration_ms" ? v / 1000 : v;  // ms → s
+  const convert = v => feature === "duration_ms" ? v / 1000 : v;  
 
   if (preferPerSong && songsObj){
     for (const y of years){
@@ -1170,7 +1139,7 @@ function aggGenreCounts(startY, endY){
 
 // Metric + decade pickers: left = metric, right = decades
 function buildDecadeMetricPanel(onChange){
-  // Left: metric
+  
   const leftWrap = d3.select("#leftContent");
   leftWrap.selectAll("*").remove();
   const metricRoot = leftWrap.append("div").attr("class","picker");
@@ -1223,7 +1192,7 @@ function buildDecadeMetricPanel(onChange){
   onChange(state());
 }
 
-// ================ DECADE RENDERERS =================
+// DECADE RENDERERS 
 function renderGenrePiesForDecades(decades, visibleGenres){
   clearChart();
   if (!decades.length){
@@ -1349,9 +1318,21 @@ function renderFeatureBoxplotsForDecades(decades, feature){
     return {dec,s};
   }).filter(d=>d.s);
 
-  const yMin = d3.min(stats, d=>d.s.min),
-        yMax = d3.max(stats, d=>d.s.max);
-  const y = d3.scaleLinear().domain([yMin,yMax]).nice().range([height,0]);
+  // const yMin = d3.min(stats, d=>d.s.min),
+  //       yMax = d3.max(stats, d=>d.s.max);
+  // const y = d3.scaleLinear().domain([yMin,yMax]).nice().range([height,0]);
+  const yMax = d3.max(stats, d => d.s.max);
+  let yLower = 0;
+
+  // For [0,1] features, still okay to start at 0 and cap near 1
+  if (["danceability","energy","acousticness"].includes(feature)) {
+    yLower = 0;
+  }
+
+const y = d3.scaleLinear()
+  .domain([yLower, yMax])
+  .nice()
+  .range([height, 0]);
   const x = d3.scaleBand().domain(stats.map(d=>d.dec)).range([60,width-20]).padding(0.25);
   const boxW = Math.min(60, x.bandwidth()*0.8);
 
@@ -1468,7 +1449,7 @@ function renderFeatureBoxplotsForDecades(decades, feature){
   syncAllStatLabels();
 }
 
-// wrapper for decade comparison view (B’s title behavior)
+// wrapper for decade comparison view
 function showDecadeComparison(){
   linkedState.activeGenre = linkedState.activeGenre || null;
 
@@ -1483,7 +1464,7 @@ function showDecadeComparison(){
   });
 }
 
-// ================= NON-DECADE RENDERERS =================
+// NON-DECADE RENDERERS 
 function renderGenre(selectedKeys, startYear=1980, endYear=2020){
   clearChart();
   const keys = selectedKeys.length ? selectedKeys : [];
@@ -1499,7 +1480,7 @@ function renderGenre(selectedKeys, startYear=1980, endYear=2020){
 
   if (keys.length && data.length){
     const stacked = d3.stack().keys(keys)(data);
-    yMax = d3.max(stacked[stacked.length-1], d => d[1]);
+    yMax = 10;
     const y = d3.scaleLinear().domain([0, yMax]).nice().range([height, 0]);
 
     g.append("g").attr("transform", `translate(0,${height})`)
@@ -1534,7 +1515,7 @@ function renderGenre(selectedKeys, startYear=1980, endYear=2020){
         update => update
           .transition().duration(250)
           .attr("x", d=>x(d.data.year))
-          .attr("y", d=>y(d[1]))
+          .attr("y", d=>y(10))
           .attr("height", d=>y(d[0])-y(d[1]))
           .attr("width", x.bandwidth()),
         exit => exit.remove()
@@ -1570,13 +1551,12 @@ function renderGenre(selectedKeys, startYear=1980, endYear=2020){
   setChartTitle("Top-10 Genre Mix By Year");
 }
 
-// Wrapper to call renderGenre from slider
 function renderGenreWithSlider(startYear, endYear){
   currentYearRange = [startYear, endYear];
   renderGenre([...selectedGenres], startYear, endYear);
 }
 
-// descriptions for features (left side in feature view)
+// descriptions for features 
 const featureDescriptions = {
   danceability: `Danceability describes how suitable a track is for dancing, based on musical elements like tempo, rhythm stability, and overall regularity. The score ranges from 0.0 (least danceable) to 1.0 (most danceable).`,
   tempo: `Tempo represents the speed of a track in beats per minute (BPM). Higher tempo usually means faster, more energetic music.`,
@@ -1599,7 +1579,7 @@ function updateFeatureDescription(feature) {
   }
 }
 
-// ================= FEATURE CHARTS =================
+// FEATURE CHARTS 
 function renderFeatureRange(feature="tempo", startYear=1980, endYear=2020){
   clearChart();
 
@@ -1612,17 +1592,33 @@ function renderFeatureRange(feature="tempo", startYear=1980, endYear=2020){
   const x = d3.scaleLinear().domain([startYear,endYear]).range([0,width]);
   
   const rawFeature = (feature === "duration_ms") ? "duration_sec" : feature;
+  //const yMin = d3.min(data, d => d[rawFeature]);
+  // const yMax = d3.max(data, d => d[rawFeature]);
+
+  // let padMin = yMin * 0.95;
+  // let padMax = yMax * 1.05;
+  // if (["danceability","energy","acousticness"].includes(feature)){
+  //   padMin = Math.max(0, yMin - 0.05);
+  //   padMax = Math.min(1, yMax + 0.05);
+  // }
+
+  // const y = d3.scaleLinear().domain([padMin,padMax]).range([height,0]);
   const yMin = d3.min(data, d => d[rawFeature]);
   const yMax = d3.max(data, d => d[rawFeature]);
 
-  let padMin = yMin * 0.95;
-  let padMax = yMax * 1.05;
-  if (["danceability","energy","acousticness"].includes(feature)){
-    padMin = Math.max(0, yMin - 0.05);
+  let padMin = 0;              // <-- always start from 0
+  let padMax = yMax * 1.05;    
+
+  // For [0,1] features, clamp to 1
+  if (["danceability","energy","acousticness"].includes(feature)) {
+    padMin = 0;
     padMax = Math.min(1, yMax + 0.05);
   }
 
-  const y = d3.scaleLinear().domain([padMin,padMax]).range([height,0]);
+const y = d3.scaleLinear()
+  .domain([padMin, padMax])
+  .range([height, 0])
+  .nice();
 
   g.append("g").attr("transform",`translate(0,${height})`)
     .call(d3.axisBottom(x).tickFormat(d3.format("d")));
@@ -1700,13 +1696,13 @@ function renderFeatureRange(feature="tempo", startYear=1980, endYear=2020){
     .on("mouseout",()=> chartTip.style("opacity",0));
 }
 
-// Slider callback for genre view
+
 function onYearSliderChange(minYear, maxYear) {
   currentYearRange = [minYear, maxYear];
   updateGenreChart();
 }
 
-// ================= VIEW ROUTER (SVG top buttons) =================
+// VIEW ROUTER
 window.onload = () => {
   let currentView = 'genre';
   const svgButtons = document.querySelectorAll('#boombox-bg rect[data-view]');
@@ -1736,15 +1732,14 @@ window.onload = () => {
       buildFeatureSlider(1980, 2020, onYearSliderChange);
       updateGenreChart();
     } else if (view === 'decade') {
-    //   showDecadeComparison();
-        // 🧹 No slider in decade view, so remove any old resize handler
+    
       if (currentSliderResizeHandler) {
         window.removeEventListener('resize', currentSliderResizeHandler);
         currentSliderResizeHandler = null;
       }
       showDecadeComparison();
     } else {
-      // feature views
+      
       buildFeatureSlider(1980, 2020, (minYear, maxYear) => renderFeatureRange(view, minYear, maxYear));
       renderFeatureRange(view, 1980, 2020);
     }
